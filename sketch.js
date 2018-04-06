@@ -1,12 +1,16 @@
 const CANVAS_SIZE = {x: 320, y: 320}
+const oscilloScreenSize = 280;
 const oscilloScreenColour = "#00ff0c";
-const moveSpeed = 50;
+const oscilloBackgroundColor = "#1d1d1d";
+const moveSpeed = 10;
 const sizeAtFront = 30;
-const radarDiameter = 270;
+const radarDiameter = oscilloScreenSize;
+const ringSpawnTime = 2.0;
 
 var canvasSz;
 var canvasResolutionScale;
 
+var helpImg;
 var backgroundImg;
 var numbers = [];
 
@@ -21,22 +25,63 @@ function deltaTime()
     return 1 / getFrameRate();
 }
 
+const HT_ENEMY = 0
+const HT_FRIENDLY = 1
+const HT_BOMB = 2
+
 class HitPoint
 {
-    constructor()
+    constructor(hitType)
     {
         this.position = createVector(0, 0);
         this.direction = p5.Vector.random2D();
+        this.type = hitType;
     }
 
     update()
     {
-        this.position.add(p5.Vector.mult(this.direction, moveSpeed * deltaTime()));
+        var distScale = this.position.mag() / oscilloScreenSize;
+        this.position.add(p5.Vector.mult(this.direction, max(pow(distScale, 1) * moveSpeed, 5) * deltaTime()));
     }
 
     draw()
     {
-        ellipse(this.position.x, this.position.y, pow(this.position.mag() / 270, 0.7) * sizeAtFront);
+        if (this.type == HT_ENEMY) //Draw as a circle
+        {
+            ellipse(this.position.x, this.position.y, pow(this.position.mag() / oscilloScreenSize, 0.7) * sizeAtFront);
+        }
+        else if (this.type == HT_FRIENDLY) //Draw as a square
+        {
+            push();
+            angleMode(RADIANS);
+            rectMode(CENTER);
+            var angle = this.position.heading();
+            translate(this.position.x, this.position.y);
+            rotate(angle);
+            var sz = pow(this.position.mag() / oscilloScreenSize, 0.7) * sizeAtFront;
+            rect(0, 0, sz, sz);
+            pop();
+        }
+        else if (this.type == HT_BOMB)
+        {
+            push();
+            angleMode(RADIANS);
+            rectMode(CENTER);
+            var angle = this.position.heading();
+            translate(this.position.x, this.position.y);
+            rotate(angle);
+            var sz = pow(this.position.mag() / oscilloScreenSize, 0.7) * sizeAtFront;
+            rect(0, 0, sz, sz);
+            rotate(radians(30));
+            rect(0, 0, sz, sz);
+            rotate(radians(30));
+            rect(0, 0, sz, sz);
+            pop();
+        }
+        else
+        {
+            print("HitPoint has an invalid type!");
+        }
     }
 }
 
@@ -60,6 +105,24 @@ class Scanline
     }
 }
 
+class Ring
+{
+    constructor()
+    {
+        this.size = 0;
+    }
+
+    update()
+    {
+        this.size += ((oscilloScreenSize) / ringSpawnTime) * deltaTime();
+    }
+
+    draw()
+    {
+        ellipse(0, 0, this.size);
+    }
+}
+
 //Load pre-tinted numbers into the table since we can't have nice things like tinting at runtime.
 function loadNumberSprites()
 {
@@ -76,6 +139,7 @@ function preload()
 {
     //loadNumberSprites();
     backgroundImg = loadImage("assets/background/game_background.png");
+    helpImg = loadImage("assets/ui/start_message.png");
 }
 
 function setCanvasSize()
@@ -101,7 +165,7 @@ function setup()
 
     for (var i = 0; i < 10; i++)
     {
-        hits.push(new HitPoint());
+        hits.push(new HitPoint(random([HT_ENEMY, HT_FRIENDLY, HT_BOMB])));
     }
 
     scanline = new Scanline();
@@ -115,7 +179,7 @@ function setup()
 function windowResized()
 {
     setCanvasSize();
-    resizeCanvas(CANVAS_SIZE.x * canvasResolutionScale, CANVAS_SIZE.y * canvasResolutionScale)
+    resizeCanvas(CANVAS_SIZE.x * canvasResolutionScale, CANVAS_SIZE.y * canvasResolutionScale);
 }
 
 var hasBegun = false;
@@ -144,34 +208,56 @@ function synth()
     }
 }
 
+var mainRing;
+
 function draw()
 {
     synth();
 
-    background(200);
+    background(oscilloBackgroundColor);
     imageMode(CORNER);
-    image(backgroundImg, 0, 0, width, height);
-    scale(canvasResolutionScale); //Draw using the same values, regardless of resolution scale
-    translate(CANVAS_SIZE.x / 2, CANVAS_SIZE.y * 0.53); //Put the world origin at the middle of the radar
-    ellipseMode(CENTER);
-    noFill();
-    strokeWeight(1 * canvasResolutionScale);
-    stroke(oscilloScreenColour);
 
-    if (!hasBegun)
-    return;
-
-    time += deltaTime();
-    ellipse(0, 0, ((time / 2) % 1) * 270);
-
-    scanline.update();
-    scanline.draw();
-
-    for (var i = 0; i < hits.length; i++)
+    if (hasBegun)
     {
-        hits[i].update();
-        hits[i].draw();
+        push();
+        scale(canvasResolutionScale); //Draw using the same values, regardless of resolution scale
+        translate(CANVAS_SIZE.x / 2, CANVAS_SIZE.y * 0.53); //Put the world origin at the middle of the radar
+        ellipseMode(CENTER);
+        noFill();
+        strokeWeight(max(0.3 * canvasResolutionScale, 1)); //The max() stops the lines becoming under 1 pixel wide at a scale of 1, but keeps them thin at higher scales
+        stroke(oscilloScreenColour);
+
+        time += deltaTime();
+
+        if (time >= ringSpawnTime)
+        {
+            time = 0;
+            mainRing = new Ring();
+        }
+
+        if (mainRing != null)
+        {
+            mainRing.update();
+            mainRing.draw();
+        }
+
+        scanline.update();
+        scanline.draw();
+
+        for (var i = 0; i < hits.length; i++)
+        {
+            hits[i].update();
+            hits[i].draw();
+        }
+
+        pop();
     }
+    else
+    {
+        image(helpImg, 0, 0, width, height);
+    }
+
+    image(backgroundImg, 0, 0, width, height);
 }
 
 function keyPressed()
