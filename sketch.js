@@ -48,7 +48,10 @@ class HitPoint
     {
         if (this.type == HT_ENEMY) //Draw as a circle
         {
+            push();
+            stroke('red');
             ellipse(this.position.x, this.position.y, pow(this.position.mag() / oscilloScreenSize, 0.7) * sizeAtFront);
+            pop();
         }
         else if (this.type == HT_FRIENDLY) //Draw as a square
         {
@@ -65,17 +68,27 @@ class HitPoint
         else if (this.type == HT_BOMB)
         {
             push();
+            stroke('yellow');
             angleMode(RADIANS);
             rectMode(CENTER);
+
+            var sz = pow(this.position.mag() / oscilloScreenSize, 0.7) * sizeAtFront;
+
             var angle = this.position.heading();
             translate(this.position.x, this.position.y);
             rotate(angle);
-            var sz = pow(this.position.mag() / oscilloScreenSize, 0.7) * sizeAtFront;
-            rect(0, 0, sz, sz);
-            rotate(radians(30));
-            rect(0, 0, sz, sz);
-            rotate(radians(30));
-            rect(0, 0, sz, sz);
+            //beginShape();
+            var sides = 5;
+            var accumAngle = 0;
+            for (var i = 0; i < sides; i++)
+            {
+                var point = p5.Vector.fromAngle(radians(accumAngle));
+                //vertex(point.x * (sz / 2), point.y * (sz / 2));
+                line(0, 0, point.x * (sz / 2), point.y * (sz / 2));
+                accumAngle += 360 / sides;
+            }
+
+            //endShape();
             pop();
         }
         else
@@ -163,11 +176,6 @@ function setup()
     ctx.webkitImageSmoothingEnabled = false;
     ctx.imageSmoothingEnabled = false;
 
-    for (var i = 0; i < 10; i++)
-    {
-        hits.push(new HitPoint(random([HT_ENEMY, HT_FRIENDLY, HT_BOMB])));
-    }
-
     scanline = new Scanline();
 
     synthOsc = new p5.Oscillator();
@@ -233,6 +241,7 @@ function draw()
         {
             time = 0;
             mainRing = new Ring();
+            hits.push(new HitPoint(random([HT_ENEMY, HT_FRIENDLY, HT_BOMB])));
         }
 
         if (mainRing != null)
@@ -241,14 +250,14 @@ function draw()
             mainRing.draw();
         }
 
-        scanline.update();
-        scanline.draw();
-
         for (var i = 0; i < hits.length; i++)
         {
             hits[i].update();
             hits[i].draw();
         }
+
+        scanline.update();
+        scanline.draw();
 
         pop();
     }
