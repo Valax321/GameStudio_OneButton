@@ -1,7 +1,0 @@
-A 2-player game where both players use the same button to try and defeat each other.
-- A spinning laser in the middle of the screen, at either end of the screen is a reactor/base for each player.
-- The laser is only active when the button (spacebar?) is held down.
-- The goal is to laser your opponent's base while protecting yours.
-- Circular area for the laser, around the outside is traps/powerups that can be lasered to advantage or disadvantage both players at once. This presents a trade-off for the user.
-- Players try to swat each others' hands away from the spacebar.
-- Maybe have times when they have to work together or they both die.

@@ -407,7 +407,7 @@ function drawScore()
     var drawXPos = scorePosition.x;
     for (var c = 0; c < scoreString.length; c++)
     {
-        var stoi = parseInt(scoreString[c]); //Cheap way to convert ascii to int. scoreString can only ever be a number and is never < 0, so this is safe.
+        var stoi = parseInt(scoreString[c]); //THANKS JS...
         image(numbers[stoi], drawXPos, scorePosition.y);
         drawXPos += 10; //The width of a character sprite with 2 pixel spacing
     }
